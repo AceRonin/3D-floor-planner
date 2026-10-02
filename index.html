@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en-MY">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ColdRoom 3D - Cold Storage Configurator</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">❄</div>
+        <div>
+          <div class="brand-title-row">
+            <span class="brand-title">ColdRoom 3D</span>
+            <span class="brand-badge">Phase 4: Equipment</span>
+          </div>
+          <div class="brand-subtitle">Modular Cold Storage Room Configurator</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-inspect-json" class="btn btn-amber">
+          <span>{ } Inspect JSON</span>
+        </button>
+        <button id="btn-reset" class="btn btn-secondary">
+          <span>↺ Reset</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main 3D Viewport -->
+    <main class="viewport-container">
+      <canvas id="three-canvas"></canvas>
+      <div id="dimension-overlay" class="dimension-overlay"></div>
+
+      <!-- Top Center Stats Badge -->
+      <div class="floating-stats">
+        <div class="stat-item">
+          <span class="stat-label">Usable Area:</span>
+          <span id="stat-area" class="stat-value text-cyan">10.64 m²</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">Usable Volume:</span>
+          <span id="stat-volume" class="stat-value text-emerald">24.47 m³</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">Internal Dims:</span>
+          <span id="stat-internal" class="stat-value text-slate">3800 × 2800 × 2300 mm</span>
+        </div>
+      </div>
+
+      <!-- Top Right View & Camera Toolbar -->
+      <div class="floating-toolbar">
+        <div class="toolbar-group camera-group">
+          <button class="tool-btn camera-btn active" data-preset="perspective" title="3D Orbit View">
+            <span>3D Orbit</span>
+          </button>
+          <button class="tool-btn camera-btn" data-preset="top" title="Top 2D Plan View">
+            <span>Top 2D</span>
+          </button>
+          <button class="tool-btn camera-btn" data-preset="front" title="Front Elevation View">
+            <span>Front</span>
+          </button>
+          <button class="tool-btn camera-btn" data-preset="isometric" title="Isometric View">
+            <span>Isometric</span>
+          </button>
+        </div>
+
+        <div class="toolbar-group toggles-group">
+          <button id="btn-toggle-roof" class="tool-btn" title="Toggle Ceiling / Roof">
+            <span class="label">Roof Off</span>
+          </button>
+          <button id="btn-toggle-dimensions" class="tool-btn active" title="Toggle Dimension Labels">
+            <span>📏 Labels</span>
+          </button>
+          <button id="btn-toggle-grid" class="tool-btn active" title="Toggle Ground Grid">
+            <span>▦ Grid</span>
+          </button>
+          <button id="btn-toggle-wireframe" class="tool-btn" title="Toggle Wireframe">
+            <span>⬚ Wireframe</span>
+          </button>
+          <button id="btn-toggle-wall-xray" class="tool-btn" title="Make wall panels translucent to inspect equipment">
+            <span class="label">Walls X-ray Off</span>
+          </button>
+          <button id="btn-inspect-json-hud" class="tool-btn text-amber" title="Inspect JSON State">
+            <span>JSON</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Left Sidebar: Dimension Controls & Panel Breakdown -->
+      <button id="btn-toggle-sidebar" class="mobile-controls-toggle" type="button" aria-expanded="false" aria-controls="dimension-sidebar">Room Controls</button>
+      <aside id="dimension-sidebar" class="dimension-sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">Room Dimensions (mm)</span>
+        </div>
+
+        <!-- Presets -->
+        <div class="control-section">
+          <div class="section-label">Quick Presets</div>
+          <div class="preset-grid">
+            <button class="preset-btn" data-length="3000" data-width="2400" data-height="2400">
+              3 × 2.4m
+            </button>
+            <button class="preset-btn" data-length="4000" data-width="3000" data-height="2400">
+              4 × 3m
+            </button>
+            <button class="preset-btn" data-length="6000" data-width="4500" data-height="3000">
+              6 × 4.5m
+            </button>
+          </div>
+        </div>
+
+        <!-- Length Input -->
+        <div class="control-card">
+          <div class="card-header">
+            <span>External Length (X)</span>
+            <span class="limits">1500 - 20000 mm</span>
+          </div>
+          <input id="slider-length" type="range" min="1500" max="20000" step="100" value="4000" class="range-slider" />
+          <div class="stepper-row">
+            <button id="btn-length-minus" class="step-btn">-100</button>
+            <div class="input-wrapper">
+              <input id="input-length" type="number" min="1500" max="20000" step="100" value="4000" class="num-input" />
+              <span class="unit">mm</span>
+            </div>
+            <button id="btn-length-plus" class="step-btn">+100</button>
+          </div>
+        </div>
+
+        <!-- Width Input -->
+        <div class="control-card">
+          <div class="card-header">
+            <span>External Width / Depth (Z)</span>
+            <span class="limits">1500 - 20000 mm</span>
+          </div>
+          <input id="slider-width" type="range" min="1500" max="20000" step="100" value="3000" class="range-slider" />
+          <div class="stepper-row">
+            <button id="btn-width-minus" class="step-btn">-100</button>
+            <div class="input-wrapper">
+              <input id="input-width" type="number" min="1500" max="20000" step="100" value="3000" class="num-input" />
+              <span class="unit">mm</span>
+            </div>
+            <button id="btn-width-plus" class="step-btn">+100</button>
+          </div>
+        </div>
+
+        <!-- Height Input -->
+        <div class="control-card">
+          <div class="card-header">
+            <span>External Height (Y)</span>
+            <span class="limits">2000 - 6000 mm</span>
+          </div>
+          <input id="slider-height" type="range" min="2000" max="6000" step="100" value="2400" class="range-slider" />
+          <div class="stepper-row">
+            <button id="btn-height-minus" class="step-btn">-100</button>
+            <div class="input-wrapper">
+              <input id="input-height" type="number" min="2000" max="6000" step="100" value="2400" class="num-input" />
+              <span class="unit">mm</span>
+            </div>
+            <button id="btn-height-plus" class="step-btn">+100</button>
+          </div>
+        </div>
+
+        <!-- Panel Thickness -->
+        <div class="control-card">
+          <div class="card-header">
+            <span>Panel Thickness</span>
+            <span class="limits">Insulation Core</span>
+          </div>
+          <div class="thickness-grid">
+            <button class="thickness-btn" data-thickness="75">75mm</button>
+            <button class="thickness-btn active" data-thickness="100">100mm</button>
+            <button class="thickness-btn" data-thickness="125">125mm</button>
+            <button class="thickness-btn" data-thickness="150">150mm</button>
+          </div>
+        </div>
+
+        <!-- Floor Construction -->
+        <div class="control-card">
+          <div class="card-header">
+            <span>Floor Construction</span>
+            <span class="limits">Tropical / Malaysia</span>
+          </div>
+          <div class="floor-grid">
+            <button class="floor-btn active" data-floor="concrete">
+              Concrete Slab
+            </button>
+            <button class="floor-btn" data-floor="insulated">
+              Insulated Panel
+            </button>
+          </div>
+          <div class="card-hint">
+            ✓ Direct on civil concrete slab (standard chiller specification).
+          </div>
+        </div>
+
+        <div class="control-card temperature-card">
+          <div class="card-header">
+            <label for="input-target-temperature">Target Temperature</label>
+            <span id="target-temperature-value" class="temperature-value">0°C</span>
+          </div>
+          <input id="input-target-temperature" type="range" min="-18" max="0" step="1" value="0" class="range-slider" />
+          <div class="temperature-range"><span>-18°C</span><span>0°C</span></div>
+          <div id="heated-sill-status" class="card-hint">Heated door sill: On</div>
+        </div>
+
+        <div class="control-card door-card">
+          <div class="card-header">
+            <span>Cold Room Doors</span>
+            <span id="door-count" class="limits">1 door</span>
+          </div>
+          <button id="btn-add-door" class="btn btn-primary door-place-btn" type="button">Place Door in 3D</button>
+          <div id="door-placement-status" class="card-hint" aria-live="polite">Select a door or start placement.</div>
+          <div id="door-list" class="door-list"></div>
+        </div>
+
+        <div class="control-card equipment-catalog-card">
+          <div class="card-header">
+            <span>Equipment Box Catalog</span>
+            <button id="btn-new-equipment" class="catalog-add-btn" type="button">Add Box</button>
+          </div>
+          <div id="equipment-catalog-status" class="card-hint" aria-live="polite">Choose a product to place it in the room.</div>
+          <div id="equipment-catalog-list" class="equipment-catalog-list"></div>
+          <form id="equipment-product-form" class="equipment-product-form hidden">
+            <div class="catalog-form-title" id="equipment-form-title">Add Equipment Box</div>
+            <label class="catalog-field" for="equipment-name">Product name<input id="equipment-name" name="name" type="text" required maxlength="50" /></label>
+            <label class="catalog-field" for="equipment-brand">Brand<input id="equipment-brand" name="brand" type="text" required maxlength="50" /></label>
+            <label class="catalog-field" for="equipment-mount-type">Mount type<select id="equipment-mount-type" name="mountType"><option value="floor">Floor</option><option value="wall">Wall</option></select></label>
+            <div class="catalog-dimensions">
+              <label class="catalog-field" for="equipment-width">Width<input id="equipment-width" name="width" type="number" min="1" max="10000" step="1" required /></label>
+              <label class="catalog-field" for="equipment-depth">Depth<input id="equipment-depth" name="depth" type="number" min="1" max="10000" step="1" required /></label>
+              <label class="catalog-field" for="equipment-height">Height<input id="equipment-height" name="height" type="number" min="1" max="10000" step="1" required /></label>
+            </div>
+            <label class="catalog-field catalog-color-field" for="equipment-color">Box color<input id="equipment-color" name="color" type="color" value="#38bdf8" /></label>
+            <div class="catalog-form-actions">
+              <button class="btn btn-primary" type="submit">Save Product</button>
+              <button id="btn-cancel-equipment-edit" class="btn btn-secondary" type="button">Cancel</button>
+            </div>
+          </form>
+          <div class="placed-equipment-section">
+            <div class="catalog-form-title">Placed in Room</div>
+            <div id="placed-equipment-list" class="placed-equipment-list"></div>
+          </div>
+        </div>
+
+        <!-- Modular Panel BOM Breakdown Card -->
+        <div class="control-card panel-summary-card">
+          <div class="card-header">
+            <span class="summary-title">📦 Modular Panels Count</span>
+            <span id="panel-total-count" class="badge-accent">18 Panels</span>
+          </div>
+
+          <div class="panel-stats-grid">
+            <div class="pstat-box">
+              <span id="panel-full-count" class="pstat-val text-cyan">16</span>
+              <span class="pstat-lbl">Full (1m)</span>
+            </div>
+            <div class="pstat-box">
+              <span id="panel-cut-count" class="pstat-val text-amber">2</span>
+              <span class="pstat-lbl">Custom Cut</span>
+            </div>
+            <div class="pstat-box">
+              <span id="panel-total-area" class="pstat-val text-emerald">62.8 m²</span>
+              <span class="pstat-lbl">Total Area</span>
+            </div>
+          </div>
+
+          <div class="panel-breakdown-list">
+            <div class="wall-breakdown-row">
+              <span class="wb-name">North Wall:</span>
+              <span id="wb-north" class="wb-val">4 × 1000mm</span>
+            </div>
+            <div class="wall-breakdown-row">
+              <span class="wb-name">South Wall:</span>
+              <span id="wb-south" class="wb-val">4 × 1000mm</span>
+            </div>
+            <div class="wall-breakdown-row">
+              <span class="wb-name">East Wall:</span>
+              <span id="wb-east" class="wb-val">2 × 1000mm + 1 × 800mm</span>
+            </div>
+            <div class="wall-breakdown-row">
+              <span class="wb-name">West Wall:</span>
+              <span id="wb-west" class="wb-val">2 × 1000mm + 1 × 800mm</span>
+            </div>
+            <div class="wall-breakdown-row">
+              <span class="wb-name">Ceiling:</span>
+              <span id="wb-ceiling" class="wb-val">4 × 1000mm (span 3.0m)</span>
+            </div>
+            <div id="wb-floor-row" class="wall-breakdown-row hidden">
+              <span class="wb-name">Floor:</span>
+              <span id="wb-floor" class="wb-val">-</span>
+            </div>
+          </div>
+
+          <div id="cut-list-alert" class="cut-alert">
+            <span class="cut-icon">✂</span>
+            <span id="cut-list-text" class="cut-text">Custom cuts: 2 × 800mm wide</span>
+          </div>
+        </div>
+      </aside>
+
+      <div id="door-floating-controls" class="door-floating-controls hidden" role="toolbar" aria-label="Selected door controls">
+        <span id="selected-door-label" class="selected-door-label">Selected Door</span>
+        <label class="door-type-control" for="door-type-select">
+          <span>Type</span>
+          <select id="door-type-select" class="door-type-select">
+            <option value="hinged">Hinged</option>
+            <option value="sliding">Sliding</option>
+          </select>
+        </label>
+        <button id="btn-flip-hinge" class="tool-btn" type="button">Flip Hinge: Left</button>
+        <button id="btn-flip-swing" class="tool-btn" type="button">Flip Swing: Out</button>
+      </div>
+
+      <!-- Bottom Hint Bar -->
+      <div class="floating-hint">
+        <span>🖱 Left Drag: Rotate</span>
+        <span>•</span>
+        <span>Right Drag: Pan</span>
+        <span>•</span>
+        <span>Scroll: Zoom</span>
+      </div>
+    </main>
+
+    <!-- JSON State Inspector Modal -->
+    <div id="json-modal" class="modal hidden">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title">Single Source of Truth: JSON State</h2>
+            <p class="modal-subtitle">
+              All 3D objects, panel counts, and quotes derive purely from this JSON.
+            </p>
+          </div>
+          <button id="btn-close-modal" class="modal-close-btn">&times;</button>
+        </div>
+
+        <div class="modal-tabs">
+          <button id="tab-export" class="tab-btn active">Current State (Export)</button>
+          <button id="tab-import" class="tab-btn">Load / Import JSON</button>
+        </div>
+
+        <div class="modal-body">
+          <div id="panel-export" class="tab-panel">
+            <pre id="json-display" class="json-code-box"></pre>
+          </div>
+          <div id="panel-import" class="tab-panel hidden">
+            <p class="import-instructions">
+              Paste a Cold Room JSON configuration to load it into the 3D scene:
+            </p>
+            <textarea id="json-import-textarea" class="import-textarea" rows="12"></textarea>
+            <div id="import-error" class="error-message"></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <div class="footer-left">
+            <span class="units-note">Units: Millimetres (mm)</span>
+          </div>
+          <div class="footer-right">
+            <button id="btn-copy-json" class="btn btn-secondary">Copy JSON</button>
+            <button id="btn-download-json" class="btn btn-primary">Download .json</button>
+            <button id="btn-cancel-import" class="btn btn-secondary hidden">Cancel</button>
+            <button id="btn-apply-json" class="btn btn-primary hidden">Apply to 3D Scene</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Application Script -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
